@@ -1,0 +1,141 @@
+name: Score Submission
+
+on:
+  pull_request_target:
+    paths:
+      - "submissions/**"
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  score:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout trusted code from the base repository
+      - name: Checkout competition repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          fetch-depth: 0
+
+      # 2. Checkout ONLY the submission files from the PR.
+      # These files are treated as data, never as executable code.
+      - name: Get participant submission
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          path: incoming
+          sparse-checkout: submissions
+          persist-credentials: false
+          allow-unsafe-pr-checkout: true
+
+      # 3. Checkout private evaluation repository
+      - name: Checkout private evaluation repository
+        uses: actions/checkout@v4
+        with:
+          repository: El-Ikram/Help_repo
+          token: ${{ secrets.PRIVATE_REPO_TOKEN }}
+          path: private_eval
+          persist-credentials: false
+
+      # 4. Set up Python
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      # 5. Install trusted competition dependencies
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      # 6. Find exactly one encrypted submission
+      - name: Find submission file
+        id: files
+        shell: bash
+        run: |
+          mapfile -t FILES < <(
+            find incoming/submissions -type f -name "*.enc"
+          )
+
+          if [ "${#FILES[@]}" -ne 1 ]; then
+            echo "Expected exactly one .enc submission."
+            echo "Found: ${#FILES[@]}"
+            exit 1
+          fi
+
+          echo "file=${FILES[0]}" >> "$GITHUB_OUTPUT"
+
+      # 7. Copy submission to a temporary location
+      - name: Prepare encrypted submission
+        env:
+          SUBMISSION_PATH: ${{ steps.files.outputs.file }}
+        run: |
+          cp "$SUBMISSION_PATH" "$RUNNER_TEMP/submission.csv.enc"
+
+      # 8. Decrypt using the private key stored in GitHub Secrets
+      - name: Decrypt submission
+        env:
+          PRIVATE_KEY_B64: ${{ secrets.PRIVATE_KEY_B64 }}
+        run: |
+          python encryption/decrypt.py \
+            "$RUNNER_TEMP/submission.csv.enc" \
+            "$RUNNER_TEMP/submission.csv"
+      
+          ls -l "$RUNNER_TEMP/submission.csv"
+
+      # 9. Validate and evaluate the segmentation submission
+      - name: Evaluate submission
+        id: eval
+        run: |
+          CSV_FILE="$RUNNER_TEMP/submission.csv"
+
+          if [ ! -f "$CSV_FILE" ]; then
+            echo "Decrypted submission was not found."
+            exit 1
+          fi
+
+          OUTPUT=$(python competition/evaluate.py \
+            "$CSV_FILE" \
+            images/Test_images \
+            private_eval/Test_masks)
+
+          echo "$OUTPUT"
+
+          SCORE=$(echo "$OUTPUT" | sed -n 's/^SCORE=//p')
+
+          if [ -z "$SCORE" ]; then
+            echo "ERROR: Score extraction failed!"
+            exit 1
+          fi
+
+          echo "score=$SCORE" >> "$GITHUB_OUTPUT"
+
+      # 10. Update leaderboard
+      - name: Commit leaderboard
+        env:
+          TEAM_NAME: ${{ github.actor }}
+          SCORE: ${{ steps.eval.outputs.score }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git fetch origin main
+          git checkout main
+          git reset --hard origin/main
+
+          echo "$TEAM_NAME,$SCORE,$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
+            >> docs/leaderboard.csv
+
+          git add docs/leaderboard.csv
+
+          if git diff --cached --quiet; then
+            echo "No leaderboard changes."
+            exit 0
+          fi
+
+          git commit -m "Leaderboard update for $TEAM_NAME"
+          git push origin main
