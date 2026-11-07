@@ -1,0 +1,24 @@
+task: binary_semantic_segmentation
+metric: dice
+metric_direction: maximize
+
+image:
+  height: 256
+  width: 256
+  channels: 1
+
+submission:
+  format: csv
+  required_columns:
+    - image_id
+    - encoded_mask
+  encoding: rle
+  rle_order: Fortran
+  rle_indexing: 1
+  rle_separator: " "
+  foreground_value: 1
+  background_value: 0
+
+evaluation:
+  averaging: per_image_macro
+  empty_mask_score: 1.0 
