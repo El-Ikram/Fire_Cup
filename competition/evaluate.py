@@ -208,6 +208,11 @@ def main(pred_path, test_images_dir, test_labels_dir):
     # Create COCO prediction object
     if results:
 
+        # Ensure required COCO metadata fields exist
+        coco_gt.dataset.setdefault("info", {})
+        coco_gt.dataset.setdefault("licenses", [])
+        
+        # Load predictions
         coco_dt = coco_gt.loadRes(results)
 
     else:
