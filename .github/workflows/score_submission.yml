@@ -1,3 +1,4 @@
+
 name: Score Submission
 
 on:
@@ -21,8 +22,7 @@ jobs:
           ref: ${{ github.event.repository.default_branch }}
           fetch-depth: 0
 
-      # 2. Checkout ONLY the submission files from the PR.
-      # These files are treated as data, never as executable code.
+      # 2. Checkout ONLY participant submission files
       - name: Get participant submission
         uses: actions/checkout@v4
         with:
@@ -48,7 +48,7 @@ jobs:
         with:
           python-version: "3.10"
 
-      # 5. Install trusted competition dependencies
+      # 5. Install evaluation dependencies
       - name: Install dependencies
         run: pip install -r requirements.txt
 
@@ -69,14 +69,14 @@ jobs:
 
           echo "file=${FILES[0]}" >> "$GITHUB_OUTPUT"
 
-      # 7. Copy submission to a temporary location
+      # 7. Copy encrypted submission to temporary storage
       - name: Prepare encrypted submission
         env:
           SUBMISSION_PATH: ${{ steps.files.outputs.file }}
         run: |
           cp "$SUBMISSION_PATH" "$RUNNER_TEMP/submission.csv.enc"
 
-      # 8. Decrypt using the private key stored in GitHub Secrets
+      # 8. Decrypt submission
       - name: Decrypt submission
         env:
           PRIVATE_KEY_B64: ${{ secrets.PRIVATE_KEY_B64 }}
@@ -84,10 +84,8 @@ jobs:
           python encryption/decrypt.py \
             "$RUNNER_TEMP/submission.csv.enc" \
             "$RUNNER_TEMP/submission.csv"
-      
-          ls -l "$RUNNER_TEMP/submission.csv"
 
-      # 9. Validate and evaluate the segmentation submission
+      # 9. Evaluate fire detection submission
       - name: Evaluate submission
         id: eval
         run: |
@@ -100,12 +98,12 @@ jobs:
 
           OUTPUT=$(python competition/evaluate.py \
             "$CSV_FILE" \
-            images/Test_images \
-            private_eval/Test_masks)
+            images/test \
+            private_eval/Test_labels)
 
           echo "$OUTPUT"
 
-          SCORE=$(echo "$OUTPUT" | sed -n 's/^SCORE=//p')
+          SCORE=$(echo "$OUTPUT" | sed -n 's/^SCORE=//p' | tail -n 1)
 
           if [ -z "$SCORE" ]; then
             echo "ERROR: Score extraction failed!"
@@ -114,7 +112,7 @@ jobs:
 
           echo "score=$SCORE" >> "$GITHUB_OUTPUT"
 
-      # 10. Update leaderboard
+      # 10. Update leaderboard CSV
       - name: Commit leaderboard
         env:
           TEAM_NAME: ${{ github.actor }}
