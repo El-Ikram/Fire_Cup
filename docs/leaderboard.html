@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>CXR Cup Leaderboard</title>
+  <link rel="stylesheet" href="leaderboard.css">
+</head>
+<body>
+
+<div class="wrap">
+
+  <header>
+    <div class="title-row">
+      <h1>
+        <span class="trophy">🏆</span> 
+        Chest X-ray Lung Segmentation Competition Leaderboard 
+        <span class="trophy">🏆</span>
+      </h1>
+      <p class="sub black-text">
+        Practice Makes Perfect • Never Stop Learning • Keep Improving
+      </p>
+    </div>
+  </header>
+
+  <main>
+
+    <!-- Controls Section -->
+    <!-- <section class="controls card">
+      
+      <div class="control">
+        <label for="search"><b>Search</b></label>
+        <input id="search" type="search" placeholder="Search team, score… 🔍" />
+      </div>
+
+      <div class="control">
+        <label for="dateFilter"><b>Date</b></label>
+        <select id="dateFilter">
+          <option value="all">All</option>
+          <option value="last7">Last week</option>
+          <option value="last30">Last 30 days</option>
+          <option value="last90">Last 90 days</option>
+          <option value="last180">Last 180 days</option>
+        </select>
+      </div>
+
+      <div class="control">
+        <label><b>Columns</b></label>
+        <div class="column-actions">
+          <button id="showAllCols">Show all</button>
+          <button id="hideAllCols">Hide all</button>
+        </div>
+        <div class="checks" id="columnToggles"></div>
+      </div>
+
+    </section> -->
+
+    <!-- Table Section -->
+    <section class="card">
+      <div class="table-wrap">
+        <table id="tbl">
+          <thead>
+            <tr>
+              <th data-key="rank" data-sort="number">Rank</th>
+              <th data-key="team" data-sort="string">Team</th>
+              <th data-key="score" data-sort="number">Score</th>
+              <th data-key="timestamp_utc" data-sort="string">Date (UTC)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Data will be inserted here dynamically -->
+          </tbody>
+        </table>
+      </div>
+
+      <div class="foot">
+        <span id="status"></span>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Stats Section -->
+  <div class="stats">
+    
+    <div class="stat-card">
+      <div class="icon">👥</div>
+      <div id="statParticipants" class="value">–</div>
+      <div class="label">Participants</div>
+    </div>
+
+    <div class="stat-card">
+      <div class="icon">🥇</div>
+      <div id="statBest" class="value">–</div>
+      <div class="label">Best Score</div>
+    </div>
+
+    <div class="stat-card">
+      <div class="icon">📊</div>
+      <div id="statAvg" class="value">–</div>
+      <div class="label">Average Score</div>
+    </div>
+    
+  </div>
+<a href="https://github.com/El-Ikram/CXR_Cup" class="github-link">
+      <button id="githubBtn">⮜ Back to GitHub</button>
+    </a>
+</div>
+
+<script src="leaderboard.js"></script>
+
+</body>
+</html>
