@@ -50,8 +50,7 @@ jobs:
 
       # 5. Install evaluation dependencies
       - name: Install dependencies
-        run: pip install pandas numpy pycocotools cryptography
-
+        run: pip install -r requirements.txt
       # 6. Find exactly one encrypted submission
       - name: Find submission file
         id: files
