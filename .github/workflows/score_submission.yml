@@ -15,14 +15,14 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Checkout trusted code from the base repository
+      # 1. Checkout trusted code from the competition repository
       - name: Checkout competition repository
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.repository.default_branch }}
           fetch-depth: 0
 
-      # 2. Checkout ONLY participant submission files
+      # 2. Get only the participant's submission files
       - name: Get participant submission
         uses: actions/checkout@v4
         with:
@@ -33,7 +33,7 @@ jobs:
           persist-credentials: false
           allow-unsafe-pr-checkout: true
 
-      # 3. Checkout private evaluation repository
+      # 3. Checkout the private repository containing test labels
       - name: Checkout private evaluation repository
         uses: actions/checkout@v4
         with:
@@ -50,7 +50,7 @@ jobs:
 
       # 5. Install evaluation dependencies
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: pip install pandas numpy pycocotools cryptography
 
       # 6. Find exactly one encrypted submission
       - name: Find submission file
@@ -69,14 +69,14 @@ jobs:
 
           echo "file=${FILES[0]}" >> "$GITHUB_OUTPUT"
 
-      # 7. Copy encrypted submission to temporary storage
+      # 7. Copy the encrypted submission to temporary storage
       - name: Prepare encrypted submission
         env:
           SUBMISSION_PATH: ${{ steps.files.outputs.file }}
         run: |
           cp "$SUBMISSION_PATH" "$RUNNER_TEMP/submission.csv.enc"
 
-      # 8. Decrypt submission
+      # 8. Decrypt the submission
       - name: Decrypt submission
         env:
           PRIVATE_KEY_B64: ${{ secrets.PRIVATE_KEY_B64 }}
@@ -85,7 +85,7 @@ jobs:
             "$RUNNER_TEMP/submission.csv.enc" \
             "$RUNNER_TEMP/submission.csv"
 
-      # 9. Evaluate fire detection submission
+      # 9. Evaluate the fire detection predictions
       - name: Evaluate submission
         id: eval
         run: |
@@ -98,7 +98,7 @@ jobs:
 
           OUTPUT=$(python competition/evaluate.py \
             "$CSV_FILE" \
-            images/test \
+            dataset/images/test \
             private_eval/Test_labels)
 
           echo "$OUTPUT"
@@ -112,7 +112,7 @@ jobs:
 
           echo "score=$SCORE" >> "$GITHUB_OUTPUT"
 
-      # 10. Update leaderboard CSV
+      # 10. Update the leaderboard CSV
       - name: Commit leaderboard
         env:
           TEAM_NAME: ${{ github.actor }}
